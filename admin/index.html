@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🛡️ 心灵伙伴 - 管理后台</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f7fa; min-height: 100vh; }
+        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; }
+        .header h1 { font-size: 20px; }
+        .logout-btn { background: rgba(255,255,255,0.2); color: white; border: none; padding: 8px 20px; border-radius: 20px; cursor: pointer; }
+        .container { max-width: 1200px; margin: 20px auto; padding: 0 20px; }
+        .card { background: white; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-bottom: 20px; overflow: hidden; }
+        .card-header { padding: 15px 20px; border-bottom: 1px solid #eee; font-weight: 600; display: flex; justify-content: space-between; align-items: center; }
+        .card-body { padding: 20px; }
+        .tabs { display: flex; border-bottom: 2px solid #eee; }
+        .tab { padding: 12px 25px; cursor: pointer; color: #666; border-bottom: 2px solid transparent; margin-bottom: -2px; }
+        .tab.active { color: #667eea; border-bottom-color: #667eea; }
+        .tab:hover { color: #667eea; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #eee; }
+        th { background: #f8f9fa; font-weight: 600; color: #333; }
+        tr:hover { background: #f8f9fa; }
+        .badge { padding: 3px 10px; border-radius: 10px; font-size: 12px; font-weight: 600; }
+        .badge-high { background: #dc3545; color: white; }
+        .badge-medium { background: #ffc107; color: #333; }
+        .badge-low { background: #28a745; color: white; }
+        .btn { padding: 6px 15px; border-radius: 5px; border: none; cursor: pointer; font-size: 14px; }
+        .btn-primary { background: #667eea; color: white; }
+        .btn-danger { background: #dc3545; color: white; }
+        .btn-sm { padding: 4px 10px; font-size: 12px; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; color: #333; font-weight: 500; }
+        .form-group input, .form-group select { width: 100%; padding: 10px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 14px; }
+        .form-group input:focus { outline: none; border-color: #667eea; }
+        .form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
+        .login-screen { min-height: 100vh; display: flex; justify-content: center; align-items: center; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .login-box { background: white; padding: 40px; border-radius: 15px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); width: 100%; max-width: 400px; }
+        .login-box h1 { text-align: center; color: #667eea; margin-bottom: 30px; }
+        .login-box .btn { width: 100%; padding: 14px; font-size: 16px; }
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 5px; }
+        .status-active { background: #28a745; }
+        .status-pending { background: #ffc107; }
+        .empty { text-align: center; padding: 40px; color: #999; }
+        .nav-tabs { display: flex; gap: 10px; }
+    </style>
+</head>
+<body>
+    <!-- 登录界面 -->
+    <div id="loginScreen" class="login-screen" style="display: none;">
+        <div class="login-box">
+            <h1>🛡️ 管理后台</h1>
+            <form id="loginForm">
+                <div class="form-group">
+                    <label>用户名</label>
+                    <input type="text" id="username" required>
+                </div>
+                <div class="form-group">
+                    <label>密码</label>
+                    <input type="password" id="password" required>
+                </div>
+                <button type="submit" class="btn btn-primary">登录</button>
+                <p id="loginStatus" style="margin-top: 15px; text-align: center; color: #dc3545;"></p>
+            </form>
+        </div>
+    </div>
+
+    <!-- 管理后台 -->
+    <div id="adminScreen" style="display: none;">
+        <div class="header">
+            <h1>🛡️ 心灵伙伴 - 管理后台</h1>
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <span id="userInfo" style="font-size: 14px;"></span>
+                <button class="logout-btn" onclick="logout()">退出</button>
+            </div>
+        </div>
+
+        <div class="container">
+            <!-- 快捷统计 -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px;">
+                <div class="card">
+                    <div class="card-body" style="text-align: center;">
+                        <div style="font-size: 32px; color: #667eea;" id="statStudents">0</div>
+                        <div style="color: #666;">学生总数</div>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-body" style="text-align: center;">
+                        <div style="font-size: 32px; color: #ffc107;" id="statAlerts">0</div>
+                        <div style="color: #666;">待处理预警</div>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-body" style="text-align: center;">
+                        <div style="font-size: 32px; color: #dc3545;" id="statHigh">0</div>
+                        <div style="color: #666;">高风险预警</div>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-body" style="text-align: center;">
+                        <div style="font-size: 32px; color: #28a745;" id="statSessions">0</div>
+                        <div style="color: #666;">对话会话</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 标签页 -->
+            <div class="card">
+                <div class="tabs">
+                    <div class="tab active" onclick="switchTab('students')">👥 学生管理</div>
+                    <div class="tab" onclick="switchTab('alerts')">⚠️ 预警中心</div>
+                    <div class="tab" onclick="switchTab('sessions')">💬 对话记录</div>
+                    <div class="tab" onclick="switchTab('config')">⚙️ 邮件配置</div>
+                </div>
+
+                <!-- 学生管理 -->
+                <div id="tabStudents" class="tab-content">
+                    <div class="card-header">
+                        <span>学生列表</span>
+                        <button class="btn btn-primary" onclick="showAddStudent()">+ 录入学生</button>
+                    </div>
+                    <div class="card-body">
+                        <table>
+                            <thead><tr><th>姓名</th><th>账号</th><th>年级</th><th>班级</th><th>注册时间</th><th>操作</th></tr></thead>
+                            <tbody id="studentsTable"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- 预警中心 -->
+                <div id="tabAlerts" class="tab-content" style="display: none;">
+                    <div class="card-header">
+                        <span>预警列表</span>
+                        <div class="nav-tabs">
+                            <button class="btn btn-sm" onclick="loadAlerts('all')">全部</button>
+                            <button class="btn btn-sm" onclick="loadAlerts('pending')">待处理</button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <table>
+                            <thead><tr><th>学生</th><th>风险等级</th><th>触发词</th><th>时间</th><th>状态</th><th>操作</th></tr></thead>
+                            <tbody id="alertsTable"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- 对话记录 -->
+                <div id="tabSessions" class="tab-content" style="display: none;">
+                    <div class="card-header">
+                        <span>对话会话</span>
+                    </div>
+                    <div class="card-body">
+                        <table>
+                            <thead><tr><th>ID</th><th>学生</th><th>开始时间</th><th>风险等级</th><th>状态</th><th>操作</th></tr></thead>
+                            <tbody id="sessionsTable"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- 邮件配置 -->
+                <div id="tabConfig" class="tab-content" style="display: none;">
+                    <div class="card-header"><span>邮件推送配置</span></div>
+                    <div class="card-body">
+                        <form id="configForm">
+                            <div class="form-row">
+                                <div class="form-group"><label>SMTP服务器</label><input type="text" id="email_host" placeholder="smtp.example.com"></div>
+                                <div class="form-group"><label>SMTP端口</label><input type="number" id="email_port" value="587"></div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group"><label>邮箱账号</label><input type="email" id="email_user" placeholder="noreply@example.com"></div>
+                                <div class="form-group"><label>邮箱密码</label><input type="password" id="email_password" placeholder="********"></div>
+                            </div>
+                            <button type="submit" class="btn btn-primary">保存配置</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 录入学生弹窗 -->
+    <div id="addStudentModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 1000;">
+        <div class="card" style="width: 400px; margin: 0;">
+            <div class="card-header">录入新学生 <button onclick="closeModal()" style="background: none; border: none; font-size: 20px; cursor: pointer;">×</button></div>
+            <div class="card-body">
+                <form id="addStudentForm">
+                    <div class="form-group"><label>姓名</label><input type="text" id="new_name" required></div>
+                    <div class="form-group"><label>用户名</label><input type="text" id="new_username" required></div>
+                    <div class="form-group"><label>密码</label><input type="password" id="new_password" required></div>
+                    <div class="form-row">
+                        <div class="form-group"><label>年级</label><input type="text" id="new_grade" placeholder="三年级"></div>
+                        <div class="form-group"><label>班级</label><input type="text" id="new_class_name" placeholder="1班"></div>
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="width: 100%;">确认录入</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- 会话详情弹窗 -->
+    <div id="sessionModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 1000;">
+        <div class="card" style="width: 600px; max-height: 80vh; margin: 0; overflow: hidden; display: flex; flex-direction: column;">
+            <div class="card-header">对话详情 <button onclick="closeSessionModal()" style="background: none; border: none; font-size: 20px; cursor: pointer;">×</button></div>
+            <div class="card-body" style="overflow-y: auto;" id="sessionDetail"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8000';
+        let token = localStorage.getItem('adminToken');
+        let currentTab = 'students';
+
+        // 初始化
+        if (token) {
+            showAdminScreen();
+            loadAllData();
+        } else {
+            document.getElementById('loginScreen').style.display = 'flex';
+        }
+
+        // 登录
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            try {
+                const res = await fetch(`${API_BASE}/api/admin/login`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({username, password})
+                });
+                const data = await res.json();
+                if (data.code === 0) {
+                    token = data.data.token;
+                    localStorage.setItem('adminToken', token);
+                    showAdminScreen();
+                    loadAllData();
+                } else {
+                    document.getElementById('loginStatus').textContent = '用户名或密码错误';
+                }
+            } catch (err) {
+                document.getElementById('loginStatus').textContent = '网络错误';
+            }
+        });
+
+        function logout() {
+            token = null;
+            localStorage.removeItem('adminToken');
+            location.reload();
+        }
+
+        function showAdminScreen() {
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('adminScreen').style.display = 'block';
+            document.getElementById('userInfo').textContent = '管理员';
+        }
+
+        async function loadAllData() {
+            await Promise.all([loadStudents(), loadAlerts(), loadSessions(), loadConfig()]);
+        }
+
+        // 学生管理
+        async function loadStudents() {
+            try {
+                const res = await fetch(`${API_BASE}/api/admin/students?token=${token}`);
+                const data = await res.json();
+                if (data.code === 0) {
+                    renderStudents(data.data.students);
+                    document.getElementById('statStudents').textContent = data.data.students.length;
+                }
+            } catch (err) { console.error(err); }
+        }
+
+        function renderStudents(students) {
+            const tbody = document.getElementById('studentsTable');
+            if (!students.length) {
+                tbody.innerHTML = '<tr><td colspan="6" class="empty">暂无学生</td></tr>';
+                return;
+            }
+            tbody.innerHTML = students.map(s => `
+                <tr>
+                    <td>${s.name}</td><td>${s.username}</td><td>${s.grade || '-'}</td>
+                    <td>${s.class_name || '-'}</td><td>${s.created_at ? s.created_at.slice(0,10) : '-'}</td>
+                    <td><button class="btn btn-sm btn-primary" onclick="viewProfile(${s.id})">档案</button></td>
+                </tr>
+            `).join('');
+        }
+
+        // 预警
+        async function loadAlerts(filter = 'all') {
+            try {
+                const res = await fetch(`${API_BASE}/api/admin/alerts?token=${token}`);
+                const data = await res.json();
+                if (data.code === 0) {
+                    let alerts = data.data.alerts || [];
+                    if (filter === 'pending') alerts = alerts.filter(a => !a.notified);
+                    renderAlerts(alerts);
+                    document.getElementById('statAlerts').textContent = alerts.filter(a => !a.notified).length;
+                    document.getElementById('statHigh').textContent = alerts.filter(a => a.risk_level === 'high').length;
+                }
+            } catch (err) { console.error(err); }
+        }
+
+        function renderAlerts(alerts) {
+            const tbody = document.getElementById('alertsTable');
+            if (!alerts.length) {
+                tbody.innerHTML = '<tr><td colspan="6" class="empty">暂无预警</td></tr>';
+                return;
+            }
+            tbody.innerHTML = alerts.map(a => `
+                <tr>
+                    <td>${a.student_name || '未知'}</td>
+                    <td><span class="badge badge-${a.risk_level}">${a.risk_level.toUpperCase()}</span></td>
+                    <td>${a.sensitive_word || '-'}</td>
+                    <td>${a.created_at ? a.created_at.slice(0,16) : '-'}</td>
+                    <td>${a.notified ? '<span class="status-dot status-active"></span>已处理' : '<span class="status-dot status-pending"></span>待处理'}</td>
+                    <td>
+                        ${!a.notified ? `<button class="btn btn-sm btn-primary" onclick="handleAlert(${a.id})">处理</button>` : ''}
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        async function handleAlert(alertId) {
+            try {
+                await fetch(`${API_BASE}/api/admin/alert/${alertId}?token=${token}`, {
+                    method: 'PATCH',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({handled: true})
+                });
+                loadAlerts();
+            } catch (err) { console.error(err); }
+        }
+
+        // 会话
+        async function loadSessions() {
+            try {
+                const res = await fetch(`${API_BASE}/api/admin/sessions?token=${token}`);
+                const data = await res.json();
+                if (data.code === 0) {
+                    renderSessions(data.data.sessions || []);
+                    document.getElementById('statSessions').textContent = data.data.sessions ? data.data.sessions.length : 0;
+                }
+            } catch (err) { console.error(err); }
+        }
+
+        function renderSessions(sessions) {
+            const tbody = document.getElementById('sessionsTable');
+            if (!sessions.length) {
+                tbody.innerHTML = '<tr><td colspan="6" class="empty">暂无会话</td></tr>';
+                return;
+            }
+            tbody.innerHTML = sessions.map(s => `
+                <tr>
+                    <td>${s.id}</td><td>-</td><td>${s.started_at ? s.started_at.slice(0,16) : '-'}</td>
+                    <td><span class="badge badge-${s.risk_level || 'low'}">${(s.risk_level || 'low').toUpperCase()}</span></td>
+                    <td>${s.status === 'active' ? '进行中' : '已结束'}</td>
+                    <td><button class="btn btn-sm btn-primary" onclick="viewSession(${s.id})">查看</button></td>
+                </tr>
+            `).join('');
+        }
+
+        async function viewSession(sessionId) {
+            try {
+                const res = await fetch(`${API_BASE}/api/admin/session/${sessionId}?token=${token}`);
+                const data = await res.json();
+                if (data.code === 0) {
+                    const msgs = data.data.messages || [];
+                    document.getElementById('sessionDetail').innerHTML = msgs.map(m => `
+                        <div style="margin-bottom: 15px; padding: 10px; background: ${m.role === 'user' ? '#e8f0fe' : '#f0f0f0'}; border-radius: 8px;">
+                            <strong>${m.role === 'user' ? '学生' : 'AI'}:</strong> ${m.content}
+                        </div>
+                    `).join('') || '<div class="empty">暂无消息</div>';
+                    document.getElementById('sessionModal').style.display = 'flex';
+                }
+            } catch (err) { console.error(err); }
+        }
+
+        function closeSessionModal() {
+            document.getElementById('sessionModal').style.display = 'none';
+        }
+
+        // 档案
+        async function viewProfile(studentId) {
+            try {
+                const res = await fetch(`${API_BASE}/api/admin/profile/${studentId}?token=${token}`);
+                const data = await res.json();
+                if (data.code === 0) {
+                    const {sessions, alerts, risk_stats} = data.data;
+                    let html = `<p><strong>学生ID:</strong> ${studentId}</p>`;
+                    html += `<p><strong>风险统计:</strong> 高${risk_stats.high} 中${risk_stats.medium} 低${risk_stats.low}</p>`;
+                    html += `<p><strong>预警数:</strong> ${alerts.length}</p>`;
+                    html += `<p><strong>会话数:</strong> ${sessions.length}</p>`;
+                    document.getElementById('sessionDetail').innerHTML = html;
+                    document.getElementById('sessionModal').style.display = 'flex';
+                }
+            } catch (err) { console.error(err); }
+        }
+
+        // 配置
+        async function loadConfig() {
+            try {
+                const res = await fetch(`${API_BASE}/api/admin/config?token=${token}`);
+                const data = await res.json();
+                if (data.code === 0) {
+                    document.getElementById('email_host').value = data.data.email_host || '';
+                    document.getElementById('email_port').value = data.data.email_port || 587;
+                    document.getElementById('email_user').value = data.data.email_user || '';
+                    document.getElementById('email_password').value = '';
+                }
+            } catch (err) { console.error(err); }
+        }
+
+        document.getElementById('configForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const config = {
+                email_host: document.getElementById('email_host').value,
+                email_port: parseInt(document.getElementById('email_port').value),
+                email_user: document.getElementById('email_user').value,
+                email_password: document.getElementById('email_password').value
+            };
+            try {
+                await fetch(`${API_BASE}/api/admin/config?token=${token}`, {
+                    method: 'PATCH',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(config)
+                });
+                alert('配置已保存');
+            } catch (err) { alert('保存失败'); }
+        });
+
+        // 录入学生
+        function showAddStudent() {
+            document.getElementById('addStudentModal').style.display = 'flex';
+        }
+
+        function closeModal() {
+            document.getElementById('addStudentModal').style.display = 'none';
+        }
+
+        document.getElementById('addStudentForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const data = {
+                name: document.getElementById('new_name').value,
+                username: document.getElementById('new_username').value,
+                password: document.getElementById('new_password').value,
+                grade: document.getElementById('new_grade').value,
+                class_name: document.getElementById('new_class_name').value
+            };
+            try {
+                const res = await fetch(`${API_BASE}/api/admin/student?token=${token}`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(data)
+                });
+                const resData = await res.json();
+                if (resData.code === 0) {
+                    closeModal();
+                    loadStudents();
+                    alert('录入成功');
+                } else {
+                    alert(resData.detail || '录入失败');
+                }
+            } catch (err) { alert('网络错误'); }
+        });
+
+        // 切换标签
+        function switchTab(tab) {
+            currentTab = tab;
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            event.target.classList.add('active');
+            document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
+            document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1)).style.display = 'block';
+        }
+    </script>
+</body>
+</html>
