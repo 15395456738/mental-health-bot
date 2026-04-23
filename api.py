@@ -1,13 +1,12 @@
 """
-Step 5: API接口模块
-验证方法: uvicorn api:app --reload --port 8000
+心灵伙伴 - API接口模块
 """
-
-from fastapi import FastAPI, HTTPException, Depends
+import os
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from typing import Optional, List
-from datetime import datetime
 import hashlib
 
 import database as db
@@ -15,18 +14,51 @@ from ai_handler import AIHandler
 from config import ADMIN_USERNAME, ADMIN_PASSWORD
 
 # ===== 初始化 =====
-app = FastAPI(title="心灵伙伴 API", version="1.0.0")
+app = FastAPI(title="心灵伙伴 API", version="2.0.0")
 
 # CORS配置
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # 生产环境应限制
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 ai = AIHandler()
+
+# 获取静态文件目录
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+FRONTEND_DIR = os.path.join(BASE_DIR, "frontend")
+ADMIN_DIR = os.path.join(BASE_DIR, "admin")
+
+# ===== 静态文件服务 =====
+@app.get("/")
+def root():
+    """前端页面"""
+    return FileResponse(os.path.join(FRONTEND_DIR, "index.html"))
+
+@app.get("/admin")
+@app.get("/admin/")
+def admin_page():
+    """管理后台"""
+    return FileResponse(os.path.join(ADMIN_DIR, "index.html"))
+
+@app.get("/admin/{path:path}")
+def admin_static(path: str):
+    """管理后台静态文件"""
+    file_path = os.path.join(ADMIN_DIR, path)
+    if os.path.exists(file_path):
+        return FileResponse(file_path)
+    return HTTPException(status_code=404, detail="Not Found")
+
+@app.get("/frontend/{path:path}")
+def frontend_static(path: str):
+    """前端静态文件"""
+    file_path = os.path.join(FRONTEND_DIR, path)
+    if os.path.exists(file_path):
+        return FileResponse(file_path)
+    return HTTPException(status_code=404, detail="Not Found")
 
 # 简单token存储（生产环境应用JWT）
 TOKEN_STUDENT = {}  # token -> student_id
