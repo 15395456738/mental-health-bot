@@ -4,7 +4,6 @@
 import subprocess
 import sys
 import os
-import webbrowser
 import time
 import threading
 
@@ -37,18 +36,16 @@ if __name__ == "__main__":
     # 等待服务启动
     time.sleep(3)
     
-    print("\n✅ 服务已启动!")
-    print("-" * 50)
+    print("\n" + "=" * 50)
+    print("✅ 服务已就绪!")
+    print("=" * 50)
     print("📝 学生端: http://localhost:8080")
     print("📝 管理端: http://localhost:8080/admin/index.html")
     print("📝 API文档: http://localhost:8000/docs")
-    print("-" * 50)
-    print("\n🎉 祝使用愉快！按 Ctrl+C 停止服务")
-    
-    # 打开浏览器（只打开一次）
-    webbrowser.open("http://localhost:8080")
-    
-    print("\n按 Ctrl+C 停止服务")
+    print("=" * 50)
+    print("\n🎉 祝使用愉快！")
+    print("（请手动打开浏览器访问上面地址）")
+    print("\n按 Ctrl+C 停止服务\n")
     
     # 保持运行
     try:
