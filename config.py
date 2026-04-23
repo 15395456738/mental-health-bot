@@ -7,8 +7,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# MiniMax API 配置
-MINIMAX_API_KEY = os.getenv("MINIMAX_API_KEY", "sk-cp-BQ7JtzFH_VKPa6bYyzuPGsw8OSQsvPrJsNxtolPmvywMcSWfnQrmPLN9LOyIN-5obUZObSYt0_BX0Q797dkrqQ-hEhswcZyiUuyyq-wwxo2TVYAvPivME0A")
+# MiniMax API 配置（请在 .env 文件中设置，不要直接写在代码里）
+MINIMAX_API_KEY = os.getenv("MINIMAX_API_KEY", "")
 MINIMAX_API_URL = "https://api.minimax.chat/v1"
 
 # 服务器配置

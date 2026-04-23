@@ -1,1 +1,2 @@
 build dist spec __pycache__ mental_health.db
+.env
