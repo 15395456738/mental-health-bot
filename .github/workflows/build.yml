@@ -25,10 +25,15 @@ jobs:
         pip install pyinstaller
         pip install fastapi uvicorn requests python-dotenv
     
-    - name: Build EXE (GUI mode, no console flash)
+    - name: Clean build
       run: |
-        mkdir -p dist
-        pyinstaller --onefile --name "心灵伙伴" --windowed --add-data "frontend;frontend" --add-data "admin;admin" start.py
+        if (Test-Path dist) { Remove-Item -Recurse -Force dist }
+        if (Test-Path build) { Remove-Item -Recurse -Force build }
+        if (Test-Path "*.spec") { Remove-Item -Force "*.spec" }
+    
+    - name: Build EXE
+      run: |
+        pyinstaller --onefile --name "心灵伙伴" --console --add-data "frontend;frontend" --add-data "admin;admin" start.py
     
     - name: Upload EXE
       uses: actions/upload-artifact@v4
