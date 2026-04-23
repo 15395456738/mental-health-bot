@@ -45,8 +45,10 @@ if __name__ == "__main__":
     print("-" * 50)
     print("\n🎉 祝使用愉快！按 Ctrl+C 停止服务")
     
-    # 打开浏览器
+    # 打开浏览器（只打开一次）
     webbrowser.open("http://localhost:8080")
+    
+    print("\n按 Ctrl+C 停止服务")
     
     # 保持运行
     try:
