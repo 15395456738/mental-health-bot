@@ -1,26 +1,24 @@
 """
-心灵伙伴 - 启动脚本
-自动初始化 + 端口检测 + 启动反馈
+心灵伙伴 - 启动器（GUI版本）
 """
 import subprocess
 import sys
 import os
 import socket
 import time
-import shutil
-import zipfile
+import threading
+import tkinter as tk
+from tkinter import messagebox
 
 # ===== 配置 =====
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 FRONTEND_DIR = os.path.join(BASE_DIR, "frontend")
 ADMIN_DIR = os.path.join(BASE_DIR, "admin")
 DB_FILE = os.path.join(BASE_DIR, "mental_health.db")
-
-DEFAULT_PORTS = [8000, 8001, 8002, 8003]  # 备用端口
+DEFAULT_PORTS = [8000, 8001, 8002, 8003]
 
 # ===== 工具函数 =====
 def find_available_port(start_port=8000):
-    """查找可用端口"""
     for port in range(start_port, start_port + 10):
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
@@ -32,7 +30,6 @@ def find_available_port(start_port=8000):
     return None
 
 def check_port_in_use(port):
-    """检查端口是否被占用"""
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
         sock.bind(('', port))
@@ -42,103 +39,151 @@ def check_port_in_use(port):
         return True
 
 def init_database():
-    """初始化数据库"""
     if not os.path.exists(DB_FILE):
-        print(f"\n📦 首次启动，正在初始化数据库...")
         try:
             import database as db
             db.init_db()
-            print("✅ 数据库初始化完成")
-        except Exception as e:
-            print(f"⚠️ 数据库初始化失败: {e}")
-    else:
-        print(f"✅ 数据库已就绪")
+            return True
+        except:
+            return False
+    return True
 
-def check_and_extract_static():
-    """检查并提取静态文件"""
-    # 检查frontend目录
-    if not os.path.exists(FRONTEND_DIR) or not os.listdir(FRONTEND_DIR):
-        print(f"\n📂 正在检查静态文件...")
-        # exe模式下静态文件可能在临时目录
-        if getattr(sys, 'frozen', False):
-            temp_dir = sys._MEIPASS
-            src_frontend = os.path.join(temp_dir, "frontend")
-            src_admin = os.path.join(temp_dir, "admin")
-            
-            if os.path.exists(src_frontend):
-                shutil.copytree(src_frontend, FRONTEND_DIR, dirs_exist_ok=True)
-            if os.path.exists(src_admin):
-                shutil.copytree(src_admin, ADMIN_DIR, dirs_exist_ok=True)
-            print("✅ 静态文件已提取")
-
-def print_banner():
-    """打印启动画面"""
-    print("=" * 60)
-    print("🫂 心灵伙伴 - 学生心理陪伴系统")
-    print("=" * 60)
-
-def main():
-    print_banner()
+# ===== GUI应用 =====
+class LauncherApp:
+    def __init__(self):
+        self.root = tk.Tk()
+        self.root.title("🫂 心灵伙伴")
+        self.root.geometry("450x300")
+        self.root.resizable(False, False)
+        
+        # 居中
+        self.root.update_idletasks()
+        x = (self.root.winfo_screenwidth() - 450) // 2
+        y = (self.root.winfo_screenheight() - 300) // 2
+        self.root.geometry(f"450x300+{x}+{y}")
+        
+        self.port = None
+        self.server_process = None
+        
+        self.create_widgets()
+        self.start_server()
     
-    # 检查端口
-    port = DEFAULT_PORTS[0]
-    if check_port_in_use(port):
-        print(f"\n⚠️ 端口 {port} 已被占用，正在查找可用端口...")
-        port = find_available_port()
-        if port:
-            print(f"✅ 找到可用端口: {port}")
+    def create_widgets(self):
+        # 标题
+        title = tk.Label(self.root, text="🫂 心灵伙伴", font=("Microsoft YaHei", 24, "bold"))
+        title.pack(pady=20)
+        
+        # 副标题
+        subtitle = tk.Label(self.root, text="学生心理陪伴系统", font=("Microsoft YaHei", 12))
+        subtitle.pack()
+        
+        # 状态文本框
+        self.status_text = tk.Text(self.root, height=8, width=50, font=("Consolas", 10))
+        self.status_text.pack(pady=15)
+        self.status_text.config(state='disabled')
+        
+        # 底部按钮
+        btn_frame = tk.Frame(self.root)
+        btn_frame.pack(pady=10)
+        
+        self.open_btn = tk.Button(btn_frame, text="打 开 浏 览 器", font=("Microsoft YaHei", 12),
+                                   command=self.open_browser, state='disabled')
+        self.open_btn.pack(side=tk.LEFT, padx=10)
+        
+        tk.Button(btn_frame, text="退 出", font=("Microsoft YaHei", 12),
+                 command=self.quit_app).pack(side=tk.LEFT, padx=10)
+    
+    def log(self, msg):
+        self.status_text.config(state='normal')
+        self.status_text.insert(tk.END, msg + "\n")
+        self.status_text.see(tk.END)
+        self.status_text.config(state='disabled')
+        self.root.update()
+    
+    def start_server(self):
+        thread = threading.Thread(target=self._start_server_thread)
+        thread.daemon = True
+        thread.start()
+    
+    def _start_server_thread(self):
+        self.log("🚀 正在启动服务...")
+        
+        # 检查端口
+        self.port = DEFAULT_PORTS[0]
+        if check_port_in_use(self.port):
+            self.log(f"⚠️ 端口 {self.port} 被占用，尝试其他端口...")
+            self.port = find_available_port()
+            if self.port:
+                self.log(f"✅ 找到可用端口: {self.port}")
+            else:
+                self.log("❌ 无法找到可用端口")
+                return
+        
+        # 初始化数据库
+        self.log("📦 检查数据库...")
+        if init_database():
+            self.log("✅ 数据库就绪")
         else:
-            print("❌ 无法找到可用端口，请关闭其他程序后重试")
-            input("按回车键退出...")
-            return
+            self.log("⚠️ 数据库初始化失败")
+        
+        # 检查静态文件
+        if not os.path.exists(FRONTEND_DIR):
+            self.log("⚠️ 前端文件未找到")
+        
+        # 启动服务
+        self.log(f"🌐 启动API服务 (端口 {self.port})...")
+        
+        try:
+            os.chdir(BASE_DIR)
+            sys.path.insert(0, BASE_DIR)
+            
+            self.server_process = subprocess.Popen(
+                [sys.executable, "-m", "uvicorn", "api:app",
+                 "--host", "0.0.0.0", "--port", str(self.port)],
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE
+            )
+            
+            time.sleep(2)
+            
+            if self.server_process.poll() is None:
+                self.log("✅ 服务启动成功!")
+                self.log("")
+                self.log("=" * 40)
+                self.log("📝 访问地址:")
+                self.log(f"   学生端: http://localhost:{self.port}/")
+                self.log(f"   管理端: http://localhost:{self.port}/admin/")
+                self.log("=" * 40)
+                self.log("")
+                self.log("📝 管理员账号: admin / admin123")
+                self.log("")
+                self.log("💡 点击下方「打开浏览器」开始使用")
+                self.open_btn.config(state='normal')
+            else:
+                self.log("❌ 服务启动失败")
+                
+        except Exception as e:
+            self.log(f"❌ 启动错误: {e}")
     
-    # 初始化
-    print(f"\n📍 工作目录: {BASE_DIR}")
-    init_database()
-    check_and_extract_static()
+    def open_browser(self):
+        if self.port:
+            import webbrowser
+            webbrowser.open(f"http://localhost:{self.port}/")
     
-    # 启动服务
-    print(f"\n🚀 正在启动服务...")
-    print("-" * 60)
+    def quit_app(self):
+        if self.server_process:
+            self.server_process.terminate()
+        self.root.quit()
+        self.root.destroy()
     
-    # 启动uvicorn
-    server_cmd = [
-        sys.executable, "-m", "uvicorn", "api:app",
-        "--host", "0.0.0.0",
-        "--port", str(port)
-    ]
-    
-    try:
-        subprocess.Popen(server_cmd, cwd=BASE_DIR)
-    except Exception as e:
-        print(f"❌ 启动失败: {e}")
-        input("按回车键退出...")
-        return
-    
-    # 等待服务启动
-    time.sleep(2)
-    
-    # 输出结果
-    print("\n" + "=" * 60)
-    print("✅ 服务启动成功!")
-    print("=" * 60)
-    print(f"\n🌐 访问地址:")
-    print(f"   学生端: http://localhost:{port}/")
-    print(f"   管理端: http://localhost:{port}/admin/")
-    print(f"   API文档: http://localhost:{port}/docs")
-    print("\n" + "-" * 60)
-    print("📝 管理员账号: admin / admin123")
-    print("-" * 60)
-    print("\n💡 首次使用请先在管理端录入学生账号")
-    print("\n按 Ctrl+C 停止服务")
-    print("=" * 60)
-    
-    # 保持运行
-    try:
-        while True:
-            time.sleep(1)
-    except KeyboardInterrupt:
-        print("\n\n👋 已停止服务")
+    def run(self):
+        self.root.protocol("WM_DELETE_WINDOW", self.quit_app)
+        self.root.mainloop()
 
+# ===== 主程序 =====
 if __name__ == "__main__":
-    main()
+    try:
+        app = LauncherApp()
+        app.run()
+    except Exception as e:
+        print(f"启动错误: {e}")
+        input("按回车键退出...")
