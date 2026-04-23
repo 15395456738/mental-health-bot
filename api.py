@@ -2,11 +2,20 @@
 心灵伙伴 - API接口模块
 """
 import os
+import sys
+
+# PyInstaller兼容：获取正确的路径
+def get_base_dir():
+    if getattr(sys, 'frozen', False):
+        return os.path.dirname(sys.executable)
+    return os.path.dirname(os.path.abspath(__file__))
+
+BASE_DIR = get_base_dir()
+
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
-from typing import Optional, List
 import hashlib
 
 import database as db
@@ -16,7 +25,6 @@ from config import ADMIN_USERNAME, ADMIN_PASSWORD
 # ===== 初始化 =====
 app = FastAPI(title="心灵伙伴 API", version="2.0.0")
 
-# CORS配置
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -27,37 +35,25 @@ app.add_middleware(
 
 ai = AIHandler()
 
-# 获取静态文件目录
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+# 静态文件目录
 FRONTEND_DIR = os.path.join(BASE_DIR, "frontend")
 ADMIN_DIR = os.path.join(BASE_DIR, "admin")
+
+def safe_file_response(path):
+    """安全的文件响应"""
+    if os.path.exists(path):
+        return FileResponse(path)
+    return HTTPException(status_code=404, detail=f"File not found: {path}")
 
 # ===== 静态文件服务 =====
 @app.get("/")
 def root():
-    """前端页面"""
-    return FileResponse(os.path.join(FRONTEND_DIR, "index.html"))
+    return safe_file_response(os.path.join(FRONTEND_DIR, "index.html"))
 
-@app.get("/admin")
 @app.get("/admin/")
+@app.get("/admin")
 def admin_page():
-    """管理后台"""
-    return FileResponse(os.path.join(ADMIN_DIR, "index.html"))
-
-@app.get("/admin/{path:path}")
-def admin_static(path: str):
-    """管理后台静态文件"""
-    file_path = os.path.join(ADMIN_DIR, path)
-    if os.path.exists(file_path):
-        return FileResponse(file_path)
-    return HTTPException(status_code=404, detail="Not Found")
-
-@app.get("/frontend/{path:path}")
-def frontend_static(path: str):
-    """前端静态文件"""
-    file_path = os.path.join(FRONTEND_DIR, path)
-    if os.path.exists(file_path):
-        return FileResponse(file_path)
+    return safe_file_response(os.path.join(ADMIN_DIR, "index.html"))
     return HTTPException(status_code=404, detail="Not Found")
 
 # 简单token存储（生产环境应用JWT）
